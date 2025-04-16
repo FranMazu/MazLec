@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Escáner de Códigos</title>
+  <script src="https://unpkg.com/@zxing/browser@latest"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 1rem;
+      background: #121212;
+      color: #eee;
+    }
+    video {
+      width: 100%;
+      border-radius: 12px;
+      margin-bottom: 1rem;
+    }
+    .codigo {
+      background: #1e1e1e;
+      padding: 0.5rem;
+      border-radius: 8px;
+      margin-bottom: 4px;
+    }
+    button {
+      margin-top: 1rem;
+      padding: 0.7rem 1rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #4caf50;
+      color: white;
+    }
+    #resetBtn {
+      background-color: #e53935;
+      margin-left: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <h2>Escáner de Códigos de Barras</h2>
+  <video id="preview"></video>
+
+  <h3>Lista de códigos escaneados:</h3>
+  <div id="listaCodigos"></div>
+
+  <button onclick="copiarLista()">📋 Copiar todos</button>
+  <button id="resetBtn" onclick="resetearLista()">🗑️ Resetear lista</button>
+
+  <script>
+    const listaDiv = document.getElementById("listaCodigos");
+    let lista = JSON.parse(localStorage.getItem("codigos")) || [];
+
+    function renderLista() {
+      listaDiv.innerHTML = "";
+      lista.forEach((codigo, i) => {
+        const div = document.createElement("div");
+        div.className = "codigo";
+        div.innerText = `${i + 1}. ${codigo}`;
+        listaDiv.appendChild(div);
+      });
+    }
+
+    function guardarCodigo(code) {
+      if (!lista.includes(code)) {
+        lista.push(code);
+        localStorage.setItem("codigos", JSON.stringify(lista));
+        renderLista();
+      }
+    }
+
+    function copiarLista() {
+      const text = lista.join("\n");
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Lista copiada al portapapeles.");
+      });
+    }
+
+    function resetearLista() {
+      if (confirm("¿Seguro que querés borrar todos los códigos?")) {
+        lista = [];
+        localStorage.removeItem("codigos");
+        renderLista();
+      }
+    }
+
+    renderLista();
+
+    const codeReader = new ZXing.BrowserBarcodeReader();
+    codeReader.decodeFromVideoDevice(null, "preview", (result, err) => {
+      if (result) {
+        guardarCodigo(result.text);
+      }
+    });
+  </script>
+</body>
+</html>
