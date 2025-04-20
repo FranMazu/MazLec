@@ -49,7 +49,7 @@
 <body>
   <h2>Escáner de Códigos de Barras</h2>
   
-  <button id="startScan">📷 Iniciar escaneo</button>
+  <button id="scanBtn">📷 Iniciar escaneo</button>
   <button id="stopScan">🛑 Detener escaneo</button>
   <video id="preview"></video>
 
@@ -63,15 +63,8 @@
 
   <script>
     const listaDiv = document.getElementById("listaCodigos");
-    const video = document.getElementById("preview");
-    const errorDiv = document.getElementById("error");
-    const stopBtn = document.getElementById("stopScan");
-
     let lista = JSON.parse(localStorage.getItem("codigos")) || [];
-    let escaneando = false;
-    let currentStream = null;
-    const codeReader = new ZXing.BrowserBarcodeReader();
-
+  
     function renderLista() {
       listaDiv.innerHTML = "";
       lista.forEach((codigo, i) => {
@@ -81,7 +74,7 @@
         listaDiv.appendChild(div);
       });
     }
-
+  
     function guardarCodigo(code) {
       if (!lista.includes(code)) {
         lista.push(code);
@@ -89,14 +82,14 @@
         renderLista();
       }
     }
-
+  
     function copiarLista() {
       const text = lista.join("\n");
       navigator.clipboard.writeText(text).then(() => {
         alert("Lista copiada al portapapeles.");
       });
     }
-
+  
     function resetearLista() {
       if (confirm("¿Seguro que querés borrar todos los códigos?")) {
         lista = [];
@@ -104,38 +97,36 @@
         renderLista();
       }
     }
-
+  
     renderLista();
-
-    document.getElementById("startScan").addEventListener("click", () => {
-      if (escaneando) return;
-
-      codeReader.decodeFromVideoDevice(null, "preview", (result, err) => {
-        if (result) {
+  
+    const codeReader = new ZXing.BrowserBarcodeReader();
+    let scanning = false;
+    let currentStream = null;
+  
+    document.getElementById("scanBtn").addEventListener("click", async () => {
+      if (scanning) return;
+  
+      scanning = true;
+      try {
+        const devices = await ZXing.BrowserCodeReader.listVideoInputDevices();
+        const selectedDeviceId = devices[0].deviceId;
+  
+        codeReader.decodeOnceFromVideoDevice(selectedDeviceId, "preview").then((result) => {
           guardarCodigo(result.text);
-        }
-        if (err && !(err instanceof ZXing.NotFoundException)) {
-          errorDiv.textContent = "Error al acceder a la cámara.";
-        }
-      }).then((controls) => {
-        video.style.display = "block";
-        escaneando = true;
-        errorDiv.textContent = "";
-        currentStream = controls;
-      }).catch(err => {
-        console.error(err);
-        errorDiv.textContent = "No se pudo iniciar la cámara. Revisá los permisos.";
-      });
-    });
-
-    stopBtn.addEventListener("click", () => {
-      if (!escaneando) return;
-
-      codeReader.reset();
-      if (currentStream) currentStream.stop();
-      video.style.display = "none";
-      escaneando = false;
+          codeReader.reset();
+          scanning = false;
+        }).catch((err) => {
+          console.error(err);
+          scanning = false;
+        });
+  
+      } catch (e) {
+        console.error("Error al iniciar la cámara:", e);
+        scanning = false;
+      }
     });
   </script>
+  
 </body>
 </html>
