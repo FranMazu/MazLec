@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Escáner de Códigos</title>
-  <script src="https://unpkg.com/html5-qrcode"></script> <!-- ESTA ES LA CORRECTA -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     body {
       background: #121212;
@@ -23,6 +23,21 @@
       padding: 0.5rem;
       border-radius: 8px;
       margin-top: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .codigo span {
+      flex-grow: 1;
+    }
+    .codigo button {
+      margin-left: 1rem;
+      background-color: #e53935;
+      border: none;
+      border-radius: 6px;
+      padding: 0.3rem 0.6rem;
+      color: white;
+      cursor: pointer;
     }
     button {
       margin: 0.5rem 0.3rem;
@@ -64,12 +79,29 @@
       lista.forEach((codigo, i) => {
         const div = document.createElement("div");
         div.className = "codigo";
-        div.innerText = `${i + 1}. ${codigo}`;
+
+        const span = document.createElement("span");
+        span.innerText = `${i + 1}. ${codigo}`;
+
+        const eliminarBtn = document.createElement("button");
+        eliminarBtn.innerText = "❌";
+        eliminarBtn.onclick = () => {
+          lista.splice(i, 1);
+          localStorage.setItem("codigos", JSON.stringify(lista));
+          renderLista();
+        };
+
+        div.appendChild(span);
+        div.appendChild(eliminarBtn);
         listaDiv.appendChild(div);
       });
     }
 
     function guardarCodigo(code) {
+      const soloNumeros = /^[0-9]{13}$/;
+
+      if (!soloNumeros.test(code)) return; // Ignora si no es un EAN-13
+
       if (!lista.includes(code)) {
         lista.push(code);
         localStorage.setItem("codigos", JSON.stringify(lista));
@@ -112,7 +144,7 @@
             { fps: 10, qrbox: 250 },
             (decodedText) => {
               guardarCodigo(decodedText);
-              detenerEscaneo(); // ⬅️ Cierra scanner automáticamente
+              // detenerEscaneo(); // Lo podés dejar comentado si querés seguir escaneando
             },
             (error) => {
               // ignoramos errores de lectura
