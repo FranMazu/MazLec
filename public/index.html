@@ -100,24 +100,24 @@
   
     renderLista();
   
-    const codeReader = new ZXing.BrowserBarcodeReader();
+    const codeReader = new ZXing.BrowserMultiFormatReader();
     let scanning = false;
-    let currentStream = null;
   
     document.getElementById("scanBtn").addEventListener("click", async () => {
       if (scanning) return;
-  
       scanning = true;
+  
       try {
-        const devices = await ZXing.BrowserCodeReader.listVideoInputDevices();
+        const devices = await codeReader.listVideoInputDevices();
         const selectedDeviceId = devices[0].deviceId;
   
         codeReader.decodeOnceFromVideoDevice(selectedDeviceId, "preview").then((result) => {
-          guardarCodigo(result.text);
+          guardarCodigo(result.getText());
           codeReader.reset();
           scanning = false;
         }).catch((err) => {
           console.error(err);
+          codeReader.reset();
           scanning = false;
         });
   
@@ -127,6 +127,7 @@
       }
     });
   </script>
+  
   
 </body>
 </html>
