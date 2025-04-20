@@ -3,26 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Escáner de Códigos</title>
-  <script src="https://unpkg.com/html5-qrcode"></script> <!-- ESTA ES LA CORRECTA -->
+  <title>Escáner de códigos</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.10/minified/html5-qrcode.min.js"></script>
   <style>
     body {
+      font-family: sans-serif;
       background: #121212;
       color: #eee;
-      font-family: sans-serif;
       padding: 1rem;
     }
     #reader {
       width: 100%;
       max-width: 500px;
-      margin: 1rem auto;
-      display: none;
+      margin-bottom: 1rem;
     }
     .codigo {
       background: #1e1e1e;
       padding: 0.5rem;
       border-radius: 8px;
-      margin-top: 0.5rem;
+      margin-bottom: 4px;
     }
     button {
       margin: 0.5rem 0.3rem;
@@ -34,30 +33,28 @@
       background-color: #4caf50;
       color: white;
     }
-    #resetBtn {
-      background-color: #e53935;
-    }
-    #stopBtn {
-      background-color: #ff9800;
-    }
+    #stopBtn { background-color: #e53935; }
+    #resetBtn { background-color: #ff9800; }
   </style>
 </head>
 <body>
-
-  <h2>📷 Escáner de códigos</h2>
-  <button id="startBtn">🚀 Iniciar escaneo</button>
+  <h2>Escáner de Códigos de Barras</h2>
+  
+  <button id="startBtn">📷 Iniciar escaneo</button>
   <button id="stopBtn">🛑 Detener escaneo</button>
+  
   <div id="reader"></div>
 
-  <h3>📋 Lista de códigos escaneados:</h3>
+  <h3>Lista de códigos escaneados:</h3>
   <div id="listaCodigos"></div>
 
   <button onclick="copiarLista()">📋 Copiar todos</button>
   <button id="resetBtn" onclick="resetearLista()">🗑️ Resetear lista</button>
 
   <script>
-    const listaDiv = document.getElementById("listaCodigos");
     let lista = JSON.parse(localStorage.getItem("codigos")) || [];
+    const listaDiv = document.getElementById("listaCodigos");
+    const reader = new Html5Qrcode("reader");
 
     function renderLista() {
       listaDiv.innerHTML = "";
@@ -94,54 +91,41 @@
 
     renderLista();
 
-    let html5QrCode;
-    let isScanning = false;
+    let scanning = false;
 
     document.getElementById("startBtn").addEventListener("click", () => {
-      if (isScanning) return;
-      Html5Qrcode.getCameras().then(cameras => {
-        if (cameras && cameras.length) {
-          const backCamera = cameras.find(c => c.label.toLowerCase().includes("back")) || cameras[0];
+      if (scanning) return;
 
-          document.getElementById("reader").style.display = "block";
-
-          html5QrCode = new Html5Qrcode("reader");
-          html5QrCode.start(
-            { deviceId: { exact: backCamera.id } },
+      Html5Qrcode.getCameras().then(devices => {
+        if (devices && devices.length) {
+          scanning = true;
+          reader.start(
+            { facingMode: "environment" }, // usa la cámara trasera
             {
               fps: 10,
-              qrbox: 250
+              qrbox: { width: 250, height: 150 }
             },
-            (decodedText) => {
+            (decodedText, decodedResult) => {
               guardarCodigo(decodedText);
+              reader.stop().then(() => {
+                scanning = false;
+              });
             },
-            (error) => {
-              // Ignorar errores por frame
+            (errorMessage) => {
+              // errores de lectura, ignoramos
             }
           );
-          isScanning = true;
-        } else {
-          alert("No se encontró ninguna cámara.");
         }
       }).catch(err => {
-        alert("Error accediendo a la cámara: " + err);
+        console.error("Error al acceder a la cámara", err);
       });
     });
 
     document.getElementById("stopBtn").addEventListener("click", () => {
-      detenerEscaneo();
+      reader.stop().then(() => {
+        scanning = false;
+      });
     });
-
-    function detenerEscaneo() {
-      if (isScanning && html5QrCode) {
-        html5QrCode.stop().then(() => {
-          document.getElementById("reader").innerHTML = "";
-          document.getElementById("reader").style.display = "none";
-          isScanning = false;
-        });
-      }
-    }
   </script>
 </body>
 </html>
-
