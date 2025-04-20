@@ -16,6 +16,7 @@
       width: 100%;
       border-radius: 10px;
       margin-bottom: 1rem;
+      display: none;
     }
     .codigo {
       background: #1e1e1e;
@@ -24,7 +25,7 @@
       margin-bottom: 4px;
     }
     button {
-      margin-top: 1rem;
+      margin: 0.5rem 0.3rem;
       padding: 0.7rem 1rem;
       font-size: 1rem;
       border: none;
@@ -35,12 +36,21 @@
     }
     #resetBtn {
       background-color: #e53935;
-      margin-left: 0.5rem;
+    }
+    #stopScan {
+      background-color: #ff9800;
+    }
+    #error {
+      color: #ff5252;
+      margin-top: 1rem;
     }
   </style>
 </head>
 <body>
   <h2>Escáner de Códigos de Barras</h2>
+  
+  <button id="startScan">📷 Iniciar escaneo</button>
+  <button id="stopScan">🛑 Detener escaneo</button>
   <video id="preview"></video>
 
   <h3>Lista de códigos escaneados:</h3>
@@ -49,9 +59,18 @@
   <button onclick="copiarLista()">📋 Copiar todos</button>
   <button id="resetBtn" onclick="resetearLista()">🗑️ Resetear lista</button>
 
+  <div id="error"></div>
+
   <script>
     const listaDiv = document.getElementById("listaCodigos");
+    const video = document.getElementById("preview");
+    const errorDiv = document.getElementById("error");
+    const stopBtn = document.getElementById("stopScan");
+
     let lista = JSON.parse(localStorage.getItem("codigos")) || [];
+    let escaneando = false;
+    let currentStream = null;
+    const codeReader = new ZXing.BrowserBarcodeReader();
 
     function renderLista() {
       listaDiv.innerHTML = "";
@@ -88,11 +107,34 @@
 
     renderLista();
 
-    const codeReader = new ZXing.BrowserBarcodeReader();
-    codeReader.decodeFromVideoDevice(null, "preview", (result, err) => {
-      if (result) {
-        guardarCodigo(result.text);
-      }
+    document.getElementById("startScan").addEventListener("click", () => {
+      if (escaneando) return;
+
+      codeReader.decodeFromVideoDevice(null, "preview", (result, err) => {
+        if (result) {
+          guardarCodigo(result.text);
+        }
+        if (err && !(err instanceof ZXing.NotFoundException)) {
+          errorDiv.textContent = "Error al acceder a la cámara.";
+        }
+      }).then((controls) => {
+        video.style.display = "block";
+        escaneando = true;
+        errorDiv.textContent = "";
+        currentStream = controls;
+      }).catch(err => {
+        console.error(err);
+        errorDiv.textContent = "No se pudo iniciar la cámara. Revisá los permisos.";
+      });
+    });
+
+    stopBtn.addEventListener("click", () => {
+      if (!escaneando) return;
+
+      codeReader.reset();
+      if (currentStream) currentStream.stop();
+      video.style.display = "none";
+      escaneando = false;
     });
   </script>
 </body>
