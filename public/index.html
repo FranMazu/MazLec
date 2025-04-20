@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Escáner</title>
+  <title>Escáner de Códigos</title>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
   <style>
     body {
@@ -15,7 +15,8 @@
     #reader {
       width: 100%;
       max-width: 500px;
-      margin: auto;
+      margin: 1rem auto;
+      display: none;
     }
     .codigo {
       background: #1e1e1e;
@@ -44,6 +45,8 @@
 <body>
 
   <h2>📷 Escáner de códigos</h2>
+  <button id="startBtn">🚀 Iniciar escaneo</button>
+  <button id="stopBtn">🛑 Detener escaneo</button>
   <div id="reader"></div>
 
   <h3>📋 Lista de códigos escaneados:</h3>
@@ -51,7 +54,6 @@
 
   <button onclick="copiarLista()">📋 Copiar todos</button>
   <button id="resetBtn" onclick="resetearLista()">🗑️ Resetear lista</button>
-  <button id="stopBtn" onclick="detenerEscaneo()">🛑 Detener escaneo</button>
 
   <script>
     const listaDiv = document.getElementById("listaCodigos");
@@ -92,37 +94,50 @@
 
     renderLista();
 
-    // Escáner con html5-qrcode
     const html5QrCode = new Html5Qrcode("reader");
+    let isScanning = false;
 
-    Html5Qrcode.getCameras().then(cameras => {
-      if (cameras && cameras.length) {
-        const backCamera = cameras.find(c => c.label.toLowerCase().includes("back")) || cameras[0];
+    document.getElementById("startBtn").addEventListener("click", () => {
+      if (isScanning) return;
+      Html5Qrcode.getCameras().then(cameras => {
+        if (cameras && cameras.length) {
+          const backCamera = cameras.find(c => c.label.toLowerCase().includes("back")) || cameras[0];
+          document.getElementById("reader").style.display = "block";
 
-        html5QrCode.start(
-          { facingMode: "environment", deviceId: backCamera.id },
-          {
-            fps: 10,
-            qrbox: 250
-          },
-          (decodedText, decodedResult) => {
-            guardarCodigo(decodedText);
-          },
-          error => {
-            // No mostrar errores por consola cada frame
-          }
-        );
-      } else {
-        alert("No se encontró ninguna cámara.");
-      }
-    }).catch(err => {
-      alert("Error accediendo a la cámara: " + err);
+          html5QrCode.start(
+            { deviceId: { exact: backCamera.id } },
+            {
+              fps: 10,
+              qrbox: 250
+            },
+            (decodedText) => {
+              guardarCodigo(decodedText);
+            },
+            (error) => {
+              // Ignorar errores por frame
+            }
+          );
+          isScanning = true;
+        } else {
+          alert("No se encontró ninguna cámara.");
+        }
+      }).catch(err => {
+        alert("Error accediendo a la cámara: " + err);
+      });
+    });
+
+    document.getElementById("stopBtn").addEventListener("click", () => {
+      detenerEscaneo();
     });
 
     function detenerEscaneo() {
-      html5QrCode.stop().then(() => {
-        document.getElementById("reader").innerHTML = "";
-      });
+      if (isScanning) {
+        html5QrCode.stop().then(() => {
+          document.getElementById("reader").innerHTML = "";
+          document.getElementById("reader").style.display = "none";
+          isScanning = false;
+        });
+      }
     }
   </script>
 </body>
