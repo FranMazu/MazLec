@@ -3,25 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Escáner de códigos</title>
-  <script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js"></script>
+  <title>Escáner</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
   <style>
     body {
-      font-family: sans-serif;
-      padding: 1rem;
       background: #121212;
       color: #eee;
+      font-family: sans-serif;
+      padding: 1rem;
     }
-    video {
+    #reader {
       width: 100%;
-      border-radius: 10px;
-      margin-bottom: 1rem;
+      max-width: 500px;
+      margin: auto;
     }
     .codigo {
       background: #1e1e1e;
       padding: 0.5rem;
       border-radius: 8px;
-      margin-bottom: 4px;
+      margin-top: 0.5rem;
     }
     button {
       margin: 0.5rem 0.3rem;
@@ -36,33 +36,25 @@
     #resetBtn {
       background-color: #e53935;
     }
-    #stopScan {
+    #stopBtn {
       background-color: #ff9800;
-    }
-    #error {
-      color: #ff5252;
-      margin-top: 1rem;
     }
   </style>
 </head>
 <body>
-  <h2>Escáner de Códigos de Barras</h2>
-  
-  <button id="scanBtn">📷 Iniciar escaneo</button>
-  <button id="stopScan">🛑 Detener escaneo</button>
-  <video id="preview" autoplay muted playsinline></video>
 
-  <h3>Lista de códigos escaneados:</h3>
+  <h2>📷 Escáner de códigos</h2>
+  <div id="reader"></div>
+
+  <h3>📋 Lista de códigos escaneados:</h3>
   <div id="listaCodigos"></div>
 
   <button onclick="copiarLista()">📋 Copiar todos</button>
   <button id="resetBtn" onclick="resetearLista()">🗑️ Resetear lista</button>
-
-  <div id="error"></div>
+  <button id="stopBtn" onclick="detenerEscaneo()">🛑 Detener escaneo</button>
 
   <script>
     const listaDiv = document.getElementById("listaCodigos");
-    const video = document.getElementById("preview");
     let lista = JSON.parse(localStorage.getItem("codigos")) || [];
 
     function renderLista() {
@@ -100,37 +92,38 @@
 
     renderLista();
 
-    const codeReader = new ZXing.BrowserMultiFormatReader();
-    let scanning = false;
+    // Escáner con html5-qrcode
+    const html5QrCode = new Html5Qrcode("reader");
 
-    document.getElementById("scanBtn").addEventListener("click", async () => {
-      if (scanning) return;
-      scanning = true;
-      video.style.display = "block";
+    Html5Qrcode.getCameras().then(cameras => {
+      if (cameras && cameras.length) {
+        const backCamera = cameras.find(c => c.label.toLowerCase().includes("back")) || cameras[0];
 
-      try {
-        const devices = await codeReader.listVideoInputDevices();
-        // Buscar la cámara trasera (si tiene)
-        const backCamera = devices.find(device => /back|trasera|environment/i.test(device.label)) || devices[0];
-        
-        await codeReader.decodeFromVideoDevice(backCamera.deviceId, "preview", (result, err) => {
-          if (result) {
-            guardarCodigo(result.getText());
+        html5QrCode.start(
+          { facingMode: "environment", deviceId: backCamera.id },
+          {
+            fps: 10,
+            qrbox: 250
+          },
+          (decodedText, decodedResult) => {
+            guardarCodigo(decodedText);
+          },
+          error => {
+            // No mostrar errores por consola cada frame
           }
-        });
-      } catch (e) {
-        console.error("Error al acceder a la cámara:", e);
-        document.getElementById("error").textContent = "No se pudo acceder a la cámara.";
-        scanning = false;
+        );
+      } else {
+        alert("No se encontró ninguna cámara.");
       }
+    }).catch(err => {
+      alert("Error accediendo a la cámara: " + err);
     });
 
-    document.getElementById("stopScan").addEventListener("click", () => {
-      codeReader.reset();
-      video.srcObject?.getTracks().forEach(track => track.stop());
-      video.style.display = "none";
-      scanning = false;
-    });
+    function detenerEscaneo() {
+      html5QrCode.stop().then(() => {
+        document.getElementById("reader").innerHTML = "";
+      });
+    }
   </script>
 </body>
 </html>
