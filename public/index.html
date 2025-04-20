@@ -16,7 +16,6 @@
       width: 100%;
       border-radius: 10px;
       margin-bottom: 1rem;
-      display: none;
     }
     .codigo {
       background: #1e1e1e;
@@ -101,32 +100,36 @@
     renderLista();
   
     const codeReader = new ZXing.BrowserMultiFormatReader();
-    let scanning = false;
+    const video = document.getElementById("preview");
+    let currentStream = null;
   
     document.getElementById("scanBtn").addEventListener("click", async () => {
-      if (scanning) return;
-      scanning = true;
-  
       try {
         const devices = await codeReader.listVideoInputDevices();
         const selectedDeviceId = devices[0].deviceId;
   
-        codeReader.decodeOnceFromVideoDevice(selectedDeviceId, "preview").then((result) => {
-          guardarCodigo(result.getText());
-          codeReader.reset();
-          scanning = false;
-        }).catch((err) => {
-          console.error(err);
-          codeReader.reset();
-          scanning = false;
-        });
+        video.style.display = "block";
   
+        const result = await codeReader.decodeOnceFromVideoDevice(selectedDeviceId, "preview");
+  
+        guardarCodigo(result.getText());
+        detenerEscaneo();
       } catch (e) {
-        console.error("Error al iniciar la cámara:", e);
-        scanning = false;
+        console.error("Error al iniciar la cámara o escanear:", e);
+        detenerEscaneo();
       }
     });
+  
+    document.getElementById("stopScan").addEventListener("click", detenerEscaneo);
+  
+    function detenerEscaneo() {
+      codeReader.reset();
+      const videoElement = document.getElementById("preview");
+      videoElement.srcObject?.getTracks().forEach(track => track.stop());
+      videoElement.style.display = "none";
+    }
   </script>
+  
   
   
 </body>
