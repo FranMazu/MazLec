@@ -27,9 +27,7 @@
       justify-content: space-between;
       align-items: center;
     }
-    .codigo span {
-      flex-grow: 1;
-    }
+    .codigo span { flex-grow: 1; }
     .codigo button {
       margin-left: 1rem;
       background-color: #e53935;
@@ -49,17 +47,13 @@
       background-color: #4caf50;
       color: white;
     }
-    #resetBtn {
-      background-color: #e53935;
-    }
-    #stopBtn {
-      background-color: #ff9800;
-    }
+    #resetBtn { background-color: #e53935; }
+    #stopBtn  { background-color: #ff9800; }
   </style>
 </head>
 <body>
 
-  <h2>📷 Escáner de códigos</h2>
+  <h2>📷 Escáner de Códigos</h2>
   <button id="startBtn">🚀 Iniciar escaneo</button>
   <button id="stopBtn">🛑 Detener escaneo</button>
   <div id="reader"></div>
@@ -79,29 +73,24 @@
       lista.forEach((codigo, i) => {
         const div = document.createElement("div");
         div.className = "codigo";
-
         const span = document.createElement("span");
         span.innerText = `${i + 1}. ${codigo}`;
-
-        const eliminarBtn = document.createElement("button");
-        eliminarBtn.innerText = "❌";
-        eliminarBtn.onclick = () => {
+        const btnEliminar = document.createElement("button");
+        btnEliminar.innerText = "❌";
+        btnEliminar.onclick = () => {
           lista.splice(i, 1);
           localStorage.setItem("codigos", JSON.stringify(lista));
           renderLista();
         };
-
         div.appendChild(span);
-        div.appendChild(eliminarBtn);
+        div.appendChild(btnEliminar);
         listaDiv.appendChild(div);
       });
     }
 
     function guardarCodigo(code) {
-      const soloNumeros = /^[0-9]{13}$/;
-
-      if (!soloNumeros.test(code)) return; // Ignora si no es un EAN-13
-
+      // solo EAN-13: 13 dígitos numéricos
+      if (!/^[0-9]{13}$/.test(code)) return;
       if (!lista.includes(code)) {
         lista.push(code);
         localStorage.setItem("codigos", JSON.stringify(lista));
@@ -110,10 +99,8 @@
     }
 
     function copiarLista() {
-      const text = lista.join("\n");
-      navigator.clipboard.writeText(text).then(() => {
-        alert("Lista copiada al portapapeles.");
-      });
+      navigator.clipboard.writeText(lista.join("\n"))
+        .then(() => alert("Lista copiada al portapapeles."));
     }
 
     function resetearLista() {
@@ -129,51 +116,46 @@
     let html5QrCode;
     let isScanning = false;
 
-    document.getElementById("startBtn").addEventListener("click", () => {
+    function startScan() {
       if (isScanning) return;
-
       Html5Qrcode.getCameras().then(cameras => {
-        if (cameras && cameras.length) {
-          const backCamera = cameras.find(c => c.label.toLowerCase().includes("back")) || cameras[0];
-
-          document.getElementById("reader").style.display = "block";
-          html5QrCode = new Html5Qrcode("reader");
-
-          html5QrCode.start(
-            { deviceId: { exact: backCamera.id } },
-            { fps: 10, qrbox: 250 },
-            (decodedText) => {
-              guardarCodigo(decodedText);
-              // detenerEscaneo(); // Lo podés dejar comentado si querés seguir escaneando
-            },
-            (error) => {
-              // ignoramos errores de lectura
-            }
-          );
-          isScanning = true;
-        } else {
-          alert("No se encontró ninguna cámara.");
-        }
-      }).catch(err => {
-        alert("Error accediendo a la cámara: " + err);
-      });
-    });
-
-    document.getElementById("stopBtn").addEventListener("click", () => {
-      detenerEscaneo();
-    });
-
-    function detenerEscaneo() {
-      if (isScanning && html5QrCode) {
-        html5QrCode.stop().then(() => {
-          document.getElementById("reader").innerHTML = "";
-          document.getElementById("reader").style.display = "none";
-          isScanning = false;
-        }).catch(err => {
-          console.error("Error al detener el escaneo:", err);
-        });
-      }
+        if (!cameras.length) return alert("No se encontró ninguna cámara.");
+        const backCam = cameras.find(c => /back|environment|trasera/i.test(c.label)) || cameras[0];
+        document.getElementById("reader").style.display = "block";
+        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start(
+          { deviceId: { exact: backCam.id } },
+          { fps: 10, qrbox: 250 },
+          decodedText => {
+            // Detener antes de preguntar
+            html5QrCode.stop().then(() => {
+              isScanning = false;
+              // confirmación
+              if (confirm(`¿Tu código es ${decodedText}?`)) {
+                guardarCodigo(decodedText);
+              }
+              // ocultar lector hasta el próximo start
+              document.getElementById("reader").style.display = "none";
+            });
+          },
+          err => {
+            /* ignorar errores de frame */
+          }
+        );
+        isScanning = true;
+      }).catch(e => alert("Error accediendo a la cámara: " + e));
     }
+
+    function stopScan() {
+      if (!isScanning || !html5QrCode) return;
+      html5QrCode.stop().then(() => {
+        isScanning = false;
+        document.getElementById("reader").style.display = "none";
+      });
+    }
+
+    document.getElementById("startBtn").onclick = startScan;
+    document.getElementById("stopBtn").onclick  = stopScan;
   </script>
 </body>
 </html>
