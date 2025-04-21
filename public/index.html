@@ -65,33 +65,35 @@
   <button id="resetBtn" onclick="resetearLista()">🗑️ Resetear lista</button>
 
   <script>
-    const listaDiv = document.getElementById("listaCodigos");
-    let lista = JSON.parse(localStorage.getItem("codigos")) || [];
+    // ——— Estado y elementos
+    const listaDiv      = document.getElementById("listaCodigos");
+    let   lista         = JSON.parse(localStorage.getItem("codigos")) || [];
+    const html5QrCode   = new Html5Qrcode("reader");
+    let   isScanning    = false;
 
+    // ——— Render lista con botón eliminar
     function renderLista() {
       listaDiv.innerHTML = "";
       lista.forEach((codigo, i) => {
         const div = document.createElement("div");
         div.className = "codigo";
         const span = document.createElement("span");
-        span.innerText = `${i + 1}. ${codigo}`;
-        const btnEliminar = document.createElement("button");
-        btnEliminar.innerText = "❌";
-        btnEliminar.onclick = () => {
-          lista.splice(i, 1);
+        span.innerText = `${i+1}. ${codigo}`;
+        const btnX = document.createElement("button");
+        btnX.innerText = "❌";
+        btnX.onclick = () => {
+          lista.splice(i,1);
           localStorage.setItem("codigos", JSON.stringify(lista));
           renderLista();
         };
-        div.appendChild(span);
-        div.appendChild(btnEliminar);
+        div.append(span, btnX);
         listaDiv.appendChild(div);
       });
     }
 
     function guardarCodigo(code) {
-      // solo EAN-13: 13 dígitos numéricos
-      if (!/^[0-9]{13}$/.test(code)) return;
-      if (!lista.includes(code)) {
+      // EAN‑13: solo 13 dígitos
+      if (/^[0-9]{13}$/.test(code) && !lista.includes(code)) {
         lista.push(code);
         localStorage.setItem("codigos", JSON.stringify(lista));
         renderLista();
@@ -100,7 +102,7 @@
 
     function copiarLista() {
       navigator.clipboard.writeText(lista.join("\n"))
-        .then(() => alert("Lista copiada al portapapeles."));
+        .then(()=> alert("Lista copiada al portapapeles."));
     }
 
     function resetearLista() {
@@ -113,47 +115,47 @@
 
     renderLista();
 
-    let html5QrCode;
-    let isScanning = false;
-
-    function startScan() {
+    // ——— Funciones de scan
+    async function startScan() {
       if (isScanning) return;
-      Html5Qrcode.getCameras().then(cameras => {
-        if (!cameras.length) return alert("No se encontró ninguna cámara.");
-        const backCam = cameras.find(c => /back|environment|trasera/i.test(c.label)) || cameras[0];
+      try {
+        const cams = await Html5Qrcode.getCameras();
+        if (!cams || !cams.length) throw "No hay cámaras";
+        // elegimos trasera si existe
+        const back = cams.find(c=>/back|environment|trasera/i.test(c.label))||cams[0];
         document.getElementById("reader").style.display = "block";
-        html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start(
-          { deviceId: { exact: backCam.id } },
+
+        await html5QrCode.start(
+          { deviceId: { exact: back.id } },
           { fps: 10, qrbox: 250 },
-          decodedText => {
-            // Detener antes de preguntar
-            html5QrCode.stop().then(() => {
-              isScanning = false;
-              // confirmación
-              if (confirm(`¿Tu código es ${decodedText}?`)) {
-                guardarCodigo(decodedText);
-              }
-              // ocultar lector hasta el próximo start
-              document.getElementById("reader").style.display = "none";
-            });
+          async decodedText => {
+            // al tener un resultado, paramos scanner
+            await html5QrCode.stop();
+            isScanning = false;
+            document.getElementById("reader").style.display = "none";
+            // confirm y guardado
+            if (confirm(`¿Tu código es ${decodedText}?`)) {
+              guardarCodigo(decodedText);
+            }
           },
-          err => {
-            /* ignorar errores de frame */
-          }
+          (_)=>{/* ignoramos errores de frame */}
         );
         isScanning = true;
-      }).catch(e => alert("Error accediendo a la cámara: " + e));
+      } catch (e) {
+        alert("Error al iniciar escáner: "+e);
+      }
     }
 
-    function stopScan() {
-      if (!isScanning || !html5QrCode) return;
-      html5QrCode.stop().then(() => {
-        isScanning = false;
-        document.getElementById("reader").style.display = "none";
-      });
+    async function stopScan() {
+      if (!isScanning) return;
+      try {
+        await html5QrCode.stop();
+      } catch(_) {}
+      isScanning = false;
+      document.getElementById("reader").style.display = "none";
     }
 
+    // ——— Listeners
     document.getElementById("startBtn").onclick = startScan;
     document.getElementById("stopBtn").onclick  = stopScan;
   </script>
