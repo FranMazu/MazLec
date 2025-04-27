@@ -132,20 +132,27 @@
     }
 
     function copiarLista() {
-      navigator.clipboard.writeText(lista.join("\n\n"))
-    .then(()=> alert("Lista copiada al portapapeles."));
+      const listaTexto = lista.join("\n\n");
+      navigator.clipboard.writeText(listaTexto)
+        .then(()=> alert("Lista copiada al portapapeles."))
+        .catch(err => alert("Error al copiar lista: " + err));
     }
 
     function compartirLista() {
-      const listaCodigosString = encodeURIComponent(lista.join("\n\n"));
+      if (lista.length === 0) {
+        alert("No hay códigos para compartir.");
+        return;
+      }
+      // Crear un enlace con los códigos como parámetro en la URL
+      const listaCodigosString = encodeURIComponent(lista.join("\n"));
       const url = `${window.location.href}?codigos=${listaCodigosString}`;
-      alert(`Enlace para compartir: ${url}`);
+      prompt("Enlace para compartir:", url);
     }
 
     function resetearLista() {
       if (confirm("¿Seguro que querés borrar todos los códigos?")) {
         lista = [];
-        guardarLista();
+        localStorage.removeItem("codigos"); // Eliminar la lista guardada en localStorage
         renderLista();
       }
     }
