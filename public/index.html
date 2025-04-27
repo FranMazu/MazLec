@@ -87,10 +87,12 @@
     }
 
     function copiarLista() {
-      // Se copian los códigos con un salto de línea doble
-      navigator.clipboard.writeText(lista.join("\n\n"))
-        .then(()=> alert("Lista copiada al portapapeles."));
-    }
+  // Se copian los códigos con un salto de línea doble
+  const texto = lista.join("\n\n"); // Asegura el doble salto de línea
+  navigator.clipboard.writeText(texto)
+    .then(() => alert("Lista copiada al portapapeles."))
+    .catch(err => alert("Error al copiar al portapapeles: " + err));
+}
 
     function generarEnlace() {
       const param = encodeURIComponent(lista.join(","));
