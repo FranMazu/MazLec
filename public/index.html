@@ -74,6 +74,7 @@
   <div id="listaCodigos"></div>
 
   <button onclick="copiarLista()">📋 Copiar todos</button>
+  <button onclick="compartirLista()">🔗 Compartir enlace</button>
   <button id="resetBtn" onclick="resetearLista()">🗑️ Resetear lista</button>
 
   <script>
@@ -135,6 +136,12 @@
     .then(()=> alert("Lista copiada al portapapeles."));
     }
 
+    function compartirLista() {
+      const listaCodigosString = encodeURIComponent(lista.join("\n\n"));
+      const url = `${window.location.href}?codigos=${listaCodigosString}`;
+      alert(`Enlace para compartir: ${url}`);
+    }
+
     function resetearLista() {
       if (confirm("¿Seguro que querés borrar todos los códigos?")) {
         lista = [];
@@ -150,7 +157,7 @@
     async function startScan() {
       if (isScanning) return;
       try {
-        const cams = await Html5Qrcode.getCameras();
+        const cams = await Html5QrCode.getCameras();
         if (!cams || !cams.length) throw "No hay cámaras";
         const back = cams.find(c=>/back|environment|trasera/i.test(c.label))||cams[0];
         document.getElementById("reader").style.display = "block";
