@@ -113,8 +113,8 @@
     }
 
     function guardarCodigo(code) {
-      // Permitimos de 12 a 14 dígitos
-      if (/^\d{12,14}$/.test(code) && !lista.includes(code)) {
+      // Permitimos de 9 a 14 dígitos
+      if (/^\d{9,14}$/.test(code) && !lista.includes(code)) {
         lista.push(code);
         guardarLista();
         renderLista();
@@ -131,7 +131,7 @@
     }
 
     function copiarLista() {
-  navigator.clipboard.writeText(lista.join("\n\n"))
+      navigator.clipboard.writeText(lista.join("\n\n"))
     .then(()=> alert("Lista copiada al portapapeles."));
     }
 
@@ -189,3 +189,4 @@
   </script>
 </body>
 </html>
+
