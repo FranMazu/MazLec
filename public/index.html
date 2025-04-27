@@ -3,21 +3,60 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Escáner de Códigos</title>
+  <title>Escáner de Códigos + Carga Manual</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
-    body { background: #121212; color: #eee; font-family: sans-serif; padding: 1rem; }
-    #reader { width:100%; max-width:500px; margin:1rem auto; display:none; }
-    .codigo { background:#1e1e1e; padding:.5rem; border-radius:8px; margin-top:.5rem;
-               display:flex; justify-content:space-between; align-items:center; }
-    .codigo span { flex-grow:1; }
-    .codigo button { margin-left:1rem; background:#e53935; border:none; border-radius:6px;
-                     padding:.3rem .6rem; color:white; cursor:pointer; }
-    button { margin:.5rem .3rem; padding:.7rem 1rem; font-size:1rem; border:none;
-             border-radius:8px; cursor:pointer; background:#4caf50; color:white; }
-    #resetBtn { background:#e53935; }
-    #stopBtn  { background:#ff9800; }
-    #linkBtn  { background:#2196f3; }
+    body {
+      background: #121212;
+      color: #eee;
+      font-family: sans-serif;
+      padding: 1rem;
+    }
+    #reader {
+      width: 100%;
+      max-width: 500px;
+      margin: 1rem auto;
+      display: none;
+    }
+    .codigo {
+      background: #1e1e1e;
+      padding: 0.5rem;
+      border-radius: 8px;
+      margin-top: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .codigo span { flex-grow: 1; }
+    .codigo button {
+      margin-left: 1rem;
+      background-color: #e53935;
+      border: none;
+      border-radius: 6px;
+      padding: 0.3rem 0.6rem;
+      color: white;
+      cursor: pointer;
+    }
+    button, input {
+      margin: 0.5rem 0.3rem;
+      padding: 0.7rem 1rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background-color: #4caf50;
+      color: white;
+    }
+    input {
+      background: #1e1e1e;
+      color: #eee;
+      width: calc(100% - 2rem);
+      margin-top: 1rem;
+      padding: 0.7rem;
+      font-size: 1rem;
+    }
+    #resetBtn { background-color: #e53935; }
+    #stopBtn  { background-color: #ff9800; }
+    #addBtn   { background-color: #2196f3; }
   </style>
 </head>
 <body>
@@ -27,36 +66,28 @@
   <button id="stopBtn">🛑 Detener escaneo</button>
   <div id="reader"></div>
 
-  <h3>📋 Lista de códigos escaneados:</h3>
+  <h3>✍️ Agregar código manual:</h3>
+  <input type="text" id="codigoManual" placeholder="Escribí el código acá..." maxlength="14">
+  <button id="addBtn" onclick="agregarManual()">➕ Agregar</button>
+
+  <h3>📋 Lista de códigos escaneados/cargados:</h3>
   <div id="listaCodigos"></div>
 
   <button onclick="copiarLista()">📋 Copiar todos</button>
-  <button id="linkBtn" onclick="generarEnlace()">🔗 Generar enlace</button>
   <button id="resetBtn" onclick="resetearLista()">🗑️ Resetear lista</button>
 
   <script>
+    // ——— Estado y elementos
     const listaDiv    = document.getElementById("listaCodigos");
+    const inputManual = document.getElementById("codigoManual");
+    let   lista       = [];
     const html5QrCode = new Html5Qrcode("reader");
-    let   lista       = JSON.parse(localStorage.getItem("codigos")) || [];
     let   isScanning  = false;
 
-    // 1) Si la URL trae ?codes=..., auto‑carga esa lista
-    (function cargarDesdeURL() {
-      const params = new URLSearchParams(window.location.search);
-      const codes  = params.get("codes");
-      if (codes) {
-        codes.split(",").forEach(c => {
-          if (/^[0-9]{13}$/.test(c) && !lista.includes(c)) lista.push(c);
-        });
-        localStorage.setItem("codigos", JSON.stringify(lista));
-        renderLista();
-        history.replaceState(null, "", window.location.pathname);
-      }
-    })();
-
+    // ——— Render lista con botón eliminar
     function renderLista() {
       listaDiv.innerHTML = "";
-      lista.forEach((codigo,i) => {
+      lista.forEach((codigo, i) => {
         const div = document.createElement("div");
         div.className = "codigo";
         const span = document.createElement("span");
@@ -65,7 +96,7 @@
         btnX.innerText = "❌";
         btnX.onclick = () => {
           lista.splice(i,1);
-          localStorage.setItem("codigos", JSON.stringify(lista));
+          guardarLista();
           renderLista();
         };
         div.append(span, btnX);
@@ -73,69 +104,88 @@
       });
     }
 
+    function guardarLista() {
+      localStorage.setItem("codigos", JSON.stringify(lista));
+    }
+
+    function cargarLista() {
+      lista = JSON.parse(localStorage.getItem("codigos")) || [];
+    }
+
     function guardarCodigo(code) {
-      if (/^[0-9]{13}$/.test(code) && !lista.includes(code)) {
+      // Permitimos de 12 a 14 dígitos
+      if (/^\d{12,14}$/.test(code) && !lista.includes(code)) {
         lista.push(code);
-        localStorage.setItem("codigos", JSON.stringify(lista));
+        guardarLista();
         renderLista();
+      } else {
+        alert("Código inválido o repetido.");
       }
     }
 
-    function copiarLista() {
-      navigator.clipboard.writeText(lista.join("\n"))
-        .then(()=> alert("Lista copiada al portapapeles."));
+    function agregarManual() {
+      const code = inputManual.value.trim();
+      guardarCodigo(code);
+      inputManual.value = "";
+      inputManual.focus();
     }
 
-    function generarEnlace() {
-      const param = encodeURIComponent(lista.join(","));
-      const url   = `${window.location.origin}${window.location.pathname}?codes=${param}`;
-      navigator.clipboard.writeText(url)
-        .then(()=> alert("Enlace copiado. Abrilo en tu PC para cargar los EANs."));
+    function copiarLista() {
+  navigator.clipboard.writeText(lista.join("\n\n"))
+    .then(()=> alert("Lista copiada al portapapeles."));
     }
 
     function resetearLista() {
       if (confirm("¿Seguro que querés borrar todos los códigos?")) {
         lista = [];
-        localStorage.removeItem("codigos");
+        guardarLista();
         renderLista();
       }
     }
 
     renderLista();
+    cargarLista();
 
+    // ——— Funciones de scan
     async function startScan() {
       if (isScanning) return;
       try {
         const cams = await Html5Qrcode.getCameras();
-        if (!cams.length) throw "No hay cámaras";
+        if (!cams || !cams.length) throw "No hay cámaras";
         const back = cams.find(c=>/back|environment|trasera/i.test(c.label))||cams[0];
         document.getElementById("reader").style.display = "block";
+
         await html5QrCode.start(
           { deviceId: { exact: back.id } },
-          { fps:10, qrbox:250 },
+          { fps: 10, qrbox: 250 },
           async decodedText => {
             await html5QrCode.stop();
             isScanning = false;
             document.getElementById("reader").style.display = "none";
-            if (confirm(`¿Tu código es ${decodedText}?`)) guardarCodigo(decodedText);
+            if (confirm(`¿Tu código es ${decodedText}?`)) {
+              guardarCodigo(decodedText);
+            }
           },
-          _=>{}
+          (_)=>{}
         );
         isScanning = true;
-      } catch(e) {
+      } catch (e) {
         alert("Error al iniciar escáner: "+e);
       }
     }
 
     async function stopScan() {
       if (!isScanning) return;
-      await html5QrCode.stop().catch(()=>{});
+      try {
+        await html5QrCode.stop();
+      } catch(_) {}
       isScanning = false;
       document.getElementById("reader").style.display = "none";
     }
 
+    // ——— Listeners
     document.getElementById("startBtn").onclick = startScan;
-    document.getElementById("stopBtn" ).onclick = stopScan;
+    document.getElementById("stopBtn").onclick  = stopScan;
   </script>
 </body>
 </html>
